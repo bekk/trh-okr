@@ -21,3 +21,5 @@ Boten trenger følgende miljøvariabler i miljøet for å kunne kjøre. Legg de 
 - `AIRTABLE_BASE` - Airtable-base der nøkkelresultatene ligger
 - `AIRTABLE_API_KEY` - API-nøkkel til Airtable-basen referert over
 - `AIRTABLE_TABLE` - Tabellen i Airtable der nøkkelresultatene ligger
+- `KEY_RESULT_RECORD_ID` - Id-en til det nøkkelresultatet som skal beveges
+- `KEY_RESULT_CURRENT_VALUE` - Navnet på den kollonnen der dagens verdi av nøkkelresultatet er lagret
