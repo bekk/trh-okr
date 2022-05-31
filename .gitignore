@@ -105,3 +105,4 @@ dist
 
 # Variables
 .env
+.vscode/settings.json
