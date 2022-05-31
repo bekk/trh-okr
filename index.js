@@ -1,4 +1,3 @@
-// TODO: Endre navn på hele greia, er jo OKR-bot egentlig
 import 'dotenv/config'
 import bolt from '@slack/bolt';
 import dayjs from 'dayjs';
@@ -19,7 +18,7 @@ const app = new App({
 
 (async () => {
     await app.start(PORT);
-    console.log(`kompis-kok-bot running on port ${PORT}`);
+    console.log(`trh-okr-bot running on port ${PORT}`);
 })();
 
 receiver.router.post("/slack/events", (req, res) => {
