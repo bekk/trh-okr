@@ -106,3 +106,4 @@ dist
 # Variables
 .env
 .vscode/settings.json
+.DS_Store

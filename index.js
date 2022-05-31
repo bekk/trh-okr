@@ -33,33 +33,34 @@ receiver.router.get("/kok/*", async (req, res) => {
             now = dayjs(req.params[0])
         }
 
-        // TODO: Generer priors, gå gjennom alle måneder fra 1.1.2020
         const startOfLastMonth = now.subtract(1, 'month').startOf('month');
         const startOfLastMonthFormatted = startOfLastMonth.format('YYYY-MM-DD');
         const startOfThisMonth = now.startOf('month').subtract(1, 'second');
-        // TODO: Paginer dersom mange poster...
-        const history = await app.client.conversations.history({
-            channel: process.env.KOMPIS_CHANNEL,
-            limit: 100,
-            oldest: startOfLastMonth.unix(),
-            latest: startOfThisMonth.unix()
-        });
-
-        const datePrintPattern = 'YYYY-MM-DDTHH:mm:ss [Z]';
-        console.log(`${history.messages.length} messages found in ${process.env.KOMPIS_CHANNEL} between ${startOfLastMonth.format(datePrintPattern)} and ${startOfThisMonth.format(datePrintPattern)}`);
-
+        
         let numberOfPostsWithKok = 0;
-        history.messages.forEach(message => {
-            if (message.reply_users_count >= KOK_TRESHOLD) {
-                numberOfPostsWithKok++;
-            } else {
-                const users = message.reactions?.flatMap((reaction) => reaction.users);
-                const numberOfUniqueReactionUsers = new Set(users).size;
-                if (numberOfUniqueReactionUsers >= KOK_TRESHOLD) {
+        let next_cursor;
+        do {
+            const history = await app.client.conversations.history({
+                channel: process.env.KOMPIS_CHANNEL,
+                limit: 100,
+                oldest: startOfLastMonth.unix(),
+                latest: startOfThisMonth.unix(),
+                cursor: next_cursor
+            });      
+                
+            next_cursor = history.response_metadata.next_cursor;
+            history.messages.forEach(message => {
+                if (message.reply_users_count >= KOK_TRESHOLD) {
                     numberOfPostsWithKok++;
+                } else {
+                    const users = message.reactions?.flatMap((reaction) => reaction.users);
+                    const numberOfUniqueReactionUsers = new Set(users).size;
+                    if (numberOfUniqueReactionUsers >= KOK_TRESHOLD) {
+                        numberOfPostsWithKok++;
+                    }
                 }
-            }
-        });
+            });
+        } while (next_cursor);
 
         const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE);
         base(process.env.AIRTABLE_TABLE).select({
@@ -75,14 +76,15 @@ receiver.router.get("/kok/*", async (req, res) => {
                 base(process.env.AIRTABLE_TABLE).update(records[0].id, record, error => {
                     if (error) { console.error(error); res.send(error); return; }
                 });
-                // TODO: oppdatere KR om ble kalt uten parametere
             } else {
                 base(process.env.AIRTABLE_TABLE).create(record, error => {
                     if (error) { console.error(error); res.send(error); return; }
                 });
             }
+            // TODO: oppdatere KR om ble kalt uten parametere
         });
 
+        const datePrintPattern = 'YYYY-MM-DDTHH:mm:ss [Z]';
         const result = `${numberOfPostsWithKok} posts with kok between ${startOfLastMonth.format(datePrintPattern)} and ${startOfThisMonth.format(datePrintPattern)}`;
         console.log(result);
         res.send(result);
