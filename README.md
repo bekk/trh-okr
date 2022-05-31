@@ -1,5 +1,7 @@
 # trh-okr
 
+![Logo image](/img/trh-okr-bot-logo.png)
+
 Bot++ for å skaffe tall til Trondheims-avdelingens OKR-er
 
 ## Bruk
