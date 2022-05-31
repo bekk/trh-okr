@@ -67,14 +67,17 @@ receiver.router.get("/kok/*", async (req, res) => {
             filterByFormula: `IS_SAME({Måned}, DATETIME_PARSE("${startOfLastMonthFormatted}", "YYYY-MM-DD"))`
         }).firstPage((error, records) => {
             if (error) { console.error(error); res.send(error); return; }
+            const record = {
+                "Måned": startOfLastMonthFormatted,
+                "Kok": numberOfPostsWithKok
+            };
             if (records?.length === 1) {
-                // TODO: oppdatere dersom verdi er annerledes
+                base(process.env.AIRTABLE_TABLE).update(records[0].id, record, error => {
+                    if (error) { console.error(error); res.send(error); return; }
+                });
                 // TODO: oppdatere KR om ble kalt uten parametere
             } else {
-                base(process.env.AIRTABLE_TABLE).create({
-                    "Måned": startOfLastMonthFormatted,
-                    "Kok": numberOfPostsWithKok
-                }, error => {
+                base(process.env.AIRTABLE_TABLE).create(record, error => {
                     if (error) { console.error(error); res.send(error); return; }
                 });
             }
