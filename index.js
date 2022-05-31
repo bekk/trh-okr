@@ -28,9 +28,11 @@ receiver.router.post("/slack/events", (req, res) => {
 receiver.router.get("/kok/*", async (req, res) => {
     try {
         const KOK_TRESHOLD = 5;
+        let lastMonth = true;
         var now = dayjs()
         if (req?.params[0] != '') {
-            now = dayjs(req.params[0])
+            now = dayjs(req.params[0]);
+            lastMonth = false;
         }
 
         const startOfLastMonth = now.subtract(1, 'month').startOf('month');
@@ -67,21 +69,33 @@ receiver.router.get("/kok/*", async (req, res) => {
             maxRecords: 1,
             filterByFormula: `IS_SAME({Måned}, DATETIME_PARSE("${startOfLastMonthFormatted}", "YYYY-MM-DD"))`
         }).firstPage((error, records) => {
-            if (error) { console.error(error); res.send(error); return; }
+            if (error) { console.error(error); return; }
             const record = {
                 "Måned": startOfLastMonthFormatted,
                 "Kok": numberOfPostsWithKok
             };
             if (records?.length === 1) {
                 base(process.env.AIRTABLE_TABLE).update(records[0].id, record, error => {
-                    if (error) { console.error(error); res.send(error); return; }
+                    if (error) { console.error(error); return; }
                 });
             } else {
                 base(process.env.AIRTABLE_TABLE).create(record, error => {
-                    if (error) { console.error(error); res.send(error); return; }
+                    if (error) { console.error(error); return; }
                 });
             }
-            // TODO: oppdatere KR om ble kalt uten parametere
+
+            if (lastMonth) {
+                base(process.env.AIRTABLE_TABLE).find(process.env.KEY_RESULT_RECORD_ID, (error, keyResult) => {
+                    if (error) { console.error(error); return; }
+                    if (keyResult[process.env.KEY_RESULT_CURRENT_VALUE] != numberOfPostsWithKok) {
+                        const updatedKeyResult = {};
+                        updatedKeyResult[`${process.env.KEY_RESULT_CURRENT_VALUE}`] = numberOfPostsWithKok;
+                        base(process.env.AIRTABLE_TABLE).update(process.env.KEY_RESULT_RECORD_ID, updatedKeyResult, error => {
+                            if (error) { console.error(error); return; }
+                        });
+                    }
+                });
+            }
         });
 
         const datePrintPattern = 'YYYY-MM-DDTHH:mm:ss [Z]';
