@@ -26,14 +26,18 @@ receiver.router.post("/slack/events", (req, res) => {
     if (req?.body?.challenge) res.send({ challenge });
 });
 
-receiver.router.get("/kok", async (req, res) => {
-    // TODO: Generer priors, gå gjennom alle måneder fra 1.1.2020
-    const KOK_TRESHOLD = 5;
-    const startOfLastMonth = dayjs().subtract(1, 'month').startOf('month');
-    const startOfThisMonth = dayjs().startOf('month').subtract(1, 'second');
-    const startOfLastMonthFormatted = startOfLastMonth.format('YYYY-MM-DD');
-    const datePrintPattern = 'YYYY-MM-DDTHH:mm:ss [Z]';
+receiver.router.get("/kok/*", async (req, res) => {
     try {
+        const KOK_TRESHOLD = 5;
+        var now = dayjs()
+        if (req?.params[0] != '') {
+            now = dayjs(req.params[0])
+        }
+
+        // TODO: Generer priors, gå gjennom alle måneder fra 1.1.2020
+        const startOfLastMonth = now.subtract(1, 'month').startOf('month');
+        const startOfLastMonthFormatted = startOfLastMonth.format('YYYY-MM-DD');
+        const startOfThisMonth = now.startOf('month').subtract(1, 'second');
         // TODO: Paginer dersom mange poster...
         const history = await app.client.conversations.history({
             channel: process.env.KOMPIS_CHANNEL,
@@ -42,6 +46,7 @@ receiver.router.get("/kok", async (req, res) => {
             latest: startOfThisMonth.unix()
         });
 
+        const datePrintPattern = 'YYYY-MM-DDTHH:mm:ss [Z]';
         console.log(`${history.messages.length} messages found in ${process.env.KOMPIS_CHANNEL} between ${startOfLastMonth.format(datePrintPattern)} and ${startOfThisMonth.format(datePrintPattern)}`);
 
         let numberOfPostsWithKok = 0;
@@ -60,17 +65,17 @@ receiver.router.get("/kok", async (req, res) => {
         const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE);
         base(process.env.AIRTABLE_TABLE).select({
             maxRecords: 1,
-            filterByFormula: `IS_SAME({Måned}, ${startOfLastMonthFormatted})`
-        }).firstPage(function (error, records) {
+            filterByFormula: `IS_SAME({Måned}, DATETIME_PARSE("${startOfLastMonthFormatted}", "YYYY-MM-DD"))`
+        }).firstPage((error, records) => {
             if (error) { console.error(error); res.send(error); return; }
-            if (records && records.length > 0) {
+            if (records?.length === 1) {
                 // TODO: oppdatere dersom verdi er annerledes
-                // TODO: post post på slack også om er tilfellet
+                // TODO: oppdatere KR om ble kalt uten parametere
             } else {
                 base(process.env.AIRTABLE_TABLE).create({
                     "Måned": startOfLastMonthFormatted,
                     "Kok": numberOfPostsWithKok
-                }, function (error, records) {
+                }, error => {
                     if (error) { console.error(error); res.send(error); return; }
                 });
             }
@@ -85,9 +90,3 @@ receiver.router.get("/kok", async (req, res) => {
         res.send(error);
     }
 });
-
-app.message("y0!", async ({ message, say }) => {
-    // say() sender en melding til kanalen hvor eventet ble avfyrt.
-    await say(`y0 <@${message.user}>!`);
-});
-
