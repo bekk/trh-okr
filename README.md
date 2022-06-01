@@ -11,7 +11,7 @@ Bot++ for å skaffe tall til Trondheims-avdelingens OKR-er.
 
 ## Kjøremiljø
 
-
+![Logo image](/img/runtime-diagram.png)
 
 ### Miljøvariabler
 
